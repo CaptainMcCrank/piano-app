@@ -1,0 +1,275 @@
+/* Color Variables */
+:root {
+    --fog: #e4d59b;
+    --anakiwa: #bac4a1;
+    --malibu: #7d9b8e;
+    --dodger-blue: #4a786d;
+    --azure-radiance: #2d5c4b;
+    --page-bg: #1a202c;
+    --card-bg: #1f2937;
+    --text-primary: #ffffff;
+    --text-secondary: #f9fafb;
+    --text-muted: #d1d5db;
+}
+
+/* Custom Piano Styles */
+.piano-container {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    height: 200px;
+    padding: 20px;
+    background: linear-gradient(135deg, #2d3748, #4a5568);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    margin: 20px 0;
+    position: relative;
+    overflow-x: auto;
+}
+
+.piano-key {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.white-key {
+    width: 40px;
+    height: 140px;
+    background: linear-gradient(to top, #ffffff, #f7fafc);
+    border: 2px solid #e2e8f0;
+    border-radius: 6px 6px 0 0;
+    margin: 0 1px;
+    box-shadow: 0 -4px 8px rgba(0,0,0,0.1);
+    color: #4a5568;
+    padding-top: 10px;
+}
+
+.black-key {
+    width: 28px;
+    height: 90px;
+    background: linear-gradient(to top, #2d3748, #1a202c);
+    border: 2px solid #1a202c;
+    border-radius: 4px 4px 0 0;
+    margin: 0 -15px;
+    z-index: 2;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
+    color: #e2e8f0;
+    padding-top: 8px;
+}
+
+.piano-key:hover {
+    transform: translateY(-2px);
+}
+
+.piano-key.active {
+    transform: translateY(-4px);
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.2);
+}
+
+.white-key.active {
+    background: linear-gradient(to top, #3182ce, #2c5282);
+    color: white;
+}
+
+.black-key.active {
+    background: linear-gradient(to top, #1e40af, #1e3a8a);
+}
+
+.piano-key.highlighted {
+    animation: pulse 1s infinite;
+}
+
+.white-key.highlighted {
+    background: linear-gradient(to top, #48bb78, #38a169);
+    color: white;
+}
+
+.black-key.highlighted {
+    background: linear-gradient(to top, #38a169, #2f855a);
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Button Styles with New Palette and Better Contrast */
+.btn-show-pattern {
+    background: var(--malibu) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid var(--anakiwa) !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-show-pattern:hover {
+    background: var(--anakiwa) !important;
+    color: #1a202c !important;
+    transform: translateY(-1px) !important;
+    text-shadow: none !important;
+}
+
+.btn-play {
+    background: var(--dodger-blue) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid var(--malibu) !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-play:hover:not(:disabled) {
+    background: var(--azure-radiance) !important;
+    color: var(--text-primary) !important;
+    transform: translateY(-1px) !important;
+}
+
+.btn-play:disabled {
+    background: #4b5563 !important;
+    color: var(--text-muted) !important;
+    border-color: #374151 !important;
+    opacity: 0.7 !important;
+    text-shadow: none !important;
+    cursor: not-allowed !important;
+}
+
+.btn-clear {
+    background: var(--anakiwa) !important;
+    color: #1a202c !important;
+    border: 2px solid var(--malibu) !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-clear:hover {
+    background: var(--malibu) !important;
+    color: var(--text-primary) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Mode Toggle Buttons */
+.mode-toggle-container {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--azure-radiance) !important;
+}
+
+.mode-toggle-active {
+    background: var(--fog) !important;
+    color: #1a202c !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.mode-toggle-inactive {
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+
+.mode-toggle-inactive:hover {
+    color: var(--text-primary) !important;
+    background: var(--azure-radiance) !important;
+}
+
+/* Text Styles */
+.text-primary {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.text-secondary {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.text-muted {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+/* Dropdown Styles */
+.dropdown-custom {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border-color: var(--azure-radiance);
+    font-weight: 500;
+}
+
+.dropdown-custom:focus {
+    border-color: var(--malibu);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(125, 155, 142, 0.2);
+}
+
+.dropdown-custom option {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+}
+
+/* Card backgrounds for better contrast */
+.card-bg {
+    background-color: var(--card-bg);
+    border: 1px solid rgba(125, 155, 142, 0.2);
+}
+
+@media (max-width: 768px) {
+    .piano-container {
+        height: 160px;
+        padding: 10px;
+    }
+    .white-key {
+        width: 32px;
+        height: 110px;
+        font-size: 10px;
+    }
+    .black-key {
+        width: 22px;
+        height: 70px;
+        font-size: 10px;
+        margin: 0 -12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .piano-container {
+        height: 160px;
+        padding: 10px;
+    }
+    .white-key {
+        width: 32px;
+        height: 110px;
+        font-size: 10px;
+    }
+    .black-key {
+        width: 22px;
+        height: 70px;
+        font-size: 10px;
+        margin: 0 -12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .piano-container {
+        height: 160px;
+        padding: 10px;
+    }
+    .white-key {
+        width: 32px;
+        height: 110px;
+        font-size: 10px;
+    }
+    .black-key {
+        width: 22px;
+        height: 70px;
+        font-size: 10px;
+        margin: 0 -12px;
+    }
+}

@@ -1,0 +1,229 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Piano Scales & Chords PWA - S3 Static Website with CloudFront CDN (Cost Optimized)'
+
+Parameters:
+  AppName:
+    Type: String
+    Default: piano-scales-app
+    Description: Name for your piano app (will be part of bucket name)
+  
+  YourName:
+    Type: String
+    Default: yourname
+    Description: Your name or identifier to make bucket name unique
+    AllowedPattern: '[a-z0-9-]*'
+    ConstraintDescription: Only lowercase letters, numbers, and hyphens allowed
+
+  BillingAlertEmail:
+    Type: String
+    Description: Email address for billing alerts (optional)
+    Default: ""
+
+  MonthlyBudgetLimit:
+    Type: Number
+    Default: 20
+    Description: Monthly budget limit in USD
+    MinValue: 1
+    MaxValue: 1000
+
+Resources:
+  # S3 Bucket for hosting the static website
+  PianoAppBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AppName}-${YourName}-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      # Cost Optimization: Lifecycle rules to manage storage
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteIncompleteUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+      # Cost Optimization: Versioning disabled to avoid extra charges
+      VersioningConfiguration:
+        Status: Suspended
+      # Cost Optimization: No server access logging to avoid extra storage
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: ['*']
+            AllowedMethods: [GET, HEAD]
+            AllowedHeaders: ['*']
+
+  # Bucket Policy to allow public read access and CloudFront access
+  PianoAppBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PianoAppBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${PianoAppBucket}/*'
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${PianoAppBucket}/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${PianoAppCloudFront}'
+
+  # CloudFront Origin Access Control
+  PianoAppOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AppName}-OAC'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # CloudFront Distribution for global CDN (Cost Optimized)
+  PianoAppCloudFront:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub '${AppName} - Piano Scales & Chords PWA (Cost Optimized)'
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          # Cost Optimization: Aggressive caching
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # Managed-CachingOptimizedForUncompressedObjects
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf  # Managed-CORS-S3Origin
+          # Cost Optimization: Cache static files for 1 year
+          DefaultTTL: 86400      # 24 hours
+          MaxTTL: 31536000       # 1 year
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2
+        # Cost Optimization: Use only US/Canada/Europe (cheapest tier)
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt PianoAppBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+            OriginAccessControlId: !GetAtt PianoAppOAC.Id
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 300  # Cache 404s for 5 minutes to reduce origin requests
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 300
+
+  # SNS Topic for billing alerts (if email provided)
+  BillingAlertTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasBillingEmail
+    Properties:
+      TopicName: !Sub '${AppName}-billing-alerts'
+      DisplayName: !Sub 'Billing Alerts for ${AppName}'
+
+  # SNS Subscription for email alerts
+  BillingAlertSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasBillingEmail
+    Properties:
+      Protocol: email
+      TopicArn: !Ref BillingAlertTopic
+      Endpoint: !Ref BillingAlertEmail
+
+  # CloudWatch Billing Alarm (80% of budget)
+  BillingAlarm80Percent:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasBillingEmail
+    Properties:
+      AlarmName: !Sub '${AppName}-billing-80-percent'
+      AlarmDescription: !Sub 'Billing alert when ${AppName} costs reach 80% of ${MonthlyBudgetLimit} USD'
+      MetricName: EstimatedCharges
+      Namespace: AWS/Billing
+      Statistic: Maximum
+      Period: 86400  # 24 hours
+      EvaluationPeriods: 1
+      Threshold: !Ref MonthlyBudgetLimit
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Currency
+          Value: USD
+      AlarmActions:
+        - !Ref BillingAlertTopic
+      TreatMissingData: notBreaching
+
+  # CloudWatch Billing Alarm (100% of budget)
+  BillingAlarm100Percent:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasBillingEmail
+    Properties:
+      AlarmName: !Sub '${AppName}-billing-100-percent'
+      AlarmDescription: !Sub 'URGENT: Billing alert when ${AppName} costs reach ${MonthlyBudgetLimit} USD'
+      MetricName: EstimatedCharges
+      Namespace: AWS/Billing
+      Statistic: Maximum
+      Period: 86400  # 24 hours
+      EvaluationPeriods: 1
+      Threshold: !Ref MonthlyBudgetLimit
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Currency
+          Value: USD
+      AlarmActions:
+        - !Ref BillingAlertTopic
+      TreatMissingData: notBreaching
+
+Conditions:
+  HasBillingEmail: !Not [!Equals [!Ref BillingAlertEmail, ""]]
+
+Outputs:
+  BucketName:
+    Description: 'Name of the S3 bucket'
+    Value: !Ref PianoAppBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketName'
+
+  S3WebsiteURL:
+    Description: 'S3 Website URL'
+    Value: !GetAtt PianoAppBucket.WebsiteURL
+    Export:
+      Name: !Sub '${AWS::StackName}-S3WebsiteURL'
+
+  CloudFrontURL:
+    Description: 'CloudFront Distribution URL (HTTPS)'
+    Value: !Sub 'https://${PianoAppCloudFront.DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudFrontURL'
+
+  CloudFrontDistributionId:
+    Description: 'CloudFront Distribution ID'
+    Value: !Ref PianoAppCloudFront
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudFrontDistributionId'
+
+  DeployCommand:
+    Description: 'Command to deploy your app files'
+    Value: !Sub 'aws s3 sync . s3://${PianoAppBucket}/ --delete --exclude "*.git/*"'
+
+  EstimatedMonthlyCost:
+    Description: 'Estimated monthly cost for typical usage'
+    Value: 'S3: ~$0.10, CloudFront: ~$0.85/month (first 1TB free), Total: <$1/month for normal traffic'
+
+  CostOptimizations:
+    Description: 'Cost optimizations applied'
+    Value: 'PriceClass_100 (US/CA/EU only), Aggressive caching, No versioning, Lifecycle rules'
