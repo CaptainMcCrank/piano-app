@@ -218,7 +218,7 @@ Outputs:
 
   DeployCommand:
     Description: 'Command to deploy your app files'
-    Value: !Sub 'aws s3 sync . s3://${PianoAppBucket}/ --delete --exclude "*.git/*"'
+    Value: !Sub 'aws s3 sync dist/ s3://${PianoAppBucket}/ --delete'
 
   EstimatedMonthlyCost:
     Description: 'Estimated monthly cost for typical usage'
