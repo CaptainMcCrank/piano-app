@@ -324,6 +324,54 @@
             const [showNoteNames, setShowNoteNames] = useState(true);
             const [isPlaying, setIsPlaying] = useState(false);
 
+            useEffect(() => {
+                let modeStartTime = Date.now();
+                let isVisible = !document.hidden;
+                
+                const handleVisibilityChange = () => {
+                    const now = Date.now();
+                    
+                    if (document.hidden && isVisible) {
+                        // User left the page - track time spent
+                        const timeSpent = now - modeStartTime;
+                        if (timeSpent > 2000) { // Only count sessions >2 seconds
+                            window.plausible('Mode Session', {
+                                props: {
+                                    mode: currentMode,
+                                    duration_seconds: Math.floor(timeSpent / 1000),
+                                    action: 'session_duration'
+                                }
+                            });
+                        }
+                        isVisible = false;
+                    } else if (!document.hidden && !isVisible) {
+                        // User returned - restart timer
+                        modeStartTime = now;
+                        isVisible = true;
+                    }
+                };
+                
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+                
+                return () => {
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
+                    // Track final session on unmount
+                    if (isVisible) {
+                        const timeSpent = Date.now() - modeStartTime;
+                        if (timeSpent > 2000) {
+                            window.plausible('Mode Session', {
+                                props: {
+                                    mode: currentMode,
+                                    duration_seconds: Math.floor(timeSpent / 1000),
+                                    action: 'session_duration'
+                                }
+                            });
+                        }
+                    }
+                };
+            }, [currentMode]); // This dependency means it re-runs when currentMode changes
+
+
             // Get current pattern notes
             const getCurrentNotes = () => {
                 const intervals = currentMode === 'scales' ? SCALES[selectedItem] : CHORDS[selectedItem];
